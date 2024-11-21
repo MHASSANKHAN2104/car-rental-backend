@@ -51,17 +51,14 @@ class CustomerController extends Controller
         try {
         $vehId = $req->input('veh_id');
 $cusId = $id;
-$status = $req->input('status');
-$requestedAt = $req->input('requested_at');
-$approvedAt = $req->input('approved_at');
+//$status = $req->input('status');
+//$approvedAt = $req->input('approved_at');
 $startDate = $req->input('start_date');
 $endDate = $req->input('end_date');
 $totalPrice = $req->input('total_price');
-$createdAt = $req->input('created_at');
-$updatedAt = $req->input('updated_at');
 
-DB::insert("INSERT INTO rental (veh_id, cus_id, status, requested_at, approved_at, start_date, end_date, total_price, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
-    $vehId, $cusId, $status, $requestedAt, $approvedAt, $startDate, $endDate, $totalPrice, $createdAt, $updatedAt
+DB::insert("INSERT INTO rental (veh_id, cus_id, start_date, end_date, total_price ) VALUES (?, ?, ?, ?,?)", [
+    $vehId, $cusId, $startDate, $endDate, $totalPrice
 ]);
 
 return successResponse("Rental Request Sent succuessfully");
