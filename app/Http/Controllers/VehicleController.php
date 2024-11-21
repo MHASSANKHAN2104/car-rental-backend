@@ -58,4 +58,32 @@ class VehicleController extends Controller
     {
         return Vehicle::all();
     }
+
+     // Update a vehicle
+     public function updateVehicle(Request $request, $id)
+     {
+         $model = $request->input('model');
+         $brand = $request->input('brand');
+         $year = $request->input('year');
+         $regNumber = $request->input('reg_number');
+         $status = $request->input('status');
+         $dailyRate = $request->input('daily_rate');
+         $mileage = $request->input('mileage');
+         $filePath = $request->input('filePath');
+
+         $affected = DB::update('UPDATE vehicles SET model = ?, brand = ?, year = ?, reg_number = ?, status = ?, daily_rate = ?, mileage = ?, filePath = ?, updated_at = NOW() WHERE id = ?', [
+             $model, $brand, $year, $regNumber, $status, $dailyRate, $mileage, $filePath, $id
+         ]);
+
+         if ($affected) {
+             return response()->json(['message' => 'Vehicle updated successfully.']);
+         }
+
+         return response()->json(['message' => 'Vehicle not found or update failed.'], 404);
+     }
+
+     // Other existing functions like list vehicles, get single vehicle, etc.
+
+
+
 }

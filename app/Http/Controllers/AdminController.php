@@ -212,6 +212,44 @@ public function deletePayment($id)
     return response()->json(['message' => 'Payment not found.'], 404);
 }
 
+public function listInsurance() {
+    $result = DB::select("SELECT * FROM insurance");
+    return response()->json($result);
+}
+
+public function addInsurance(Request $request) {
+
+    DB::insert("INSERT INTO insurance (veh_id, insurance_company, policy_number, start_date, end_date, coverage_details)
+              VALUES (?, ?, ?, ?, ?, ?)", [
+        $request->veh_id,
+        $request->insurance_company,
+        $request->policy_number,
+        $request->start_date,
+        $request->end_date,
+        $request->coverage_details
+    ]);
+    return response()->json(['message' => 'Insurance added successfully.']);
+}
+
+public function updateInsurance(Request $request, $id) {
+    DB::update("UPDATE insurance
+              SET veh_id = ?, insurance_company = ?, policy_number = ?, start_date = ?, end_date = ?, coverage_details = ?
+              WHERE id = ?", [
+        $request->veh_id,
+        $request->insurance_company,
+        $request->policy_number,
+        $request->start_date,
+        $request->end_date,
+        $request->coverage_details,
+        $id
+    ]);
+    return response()->json(['message' => 'Insurance updated successfully.']);
+}
+
+public function deleteInsurance($id) {
+    DB::delete("DELETE FROM insurance WHERE id = ?", [$id]);
+    return response()->json(['message' => 'Insurance deleted successfully.']);
+}
 
 
 
