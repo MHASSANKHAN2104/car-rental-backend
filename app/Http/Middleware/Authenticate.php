@@ -18,7 +18,7 @@ class Authenticate extends Middleware
     }
 
     // If for web requests, you may handle it differently (but not needed in your case)
-    //return route('login'); // Remove this if you're not using web-based login.
+    return route('login'); // Remove this if you're not using web-based login.
 }
 
 }
