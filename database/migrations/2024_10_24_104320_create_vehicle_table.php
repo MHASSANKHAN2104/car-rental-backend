@@ -16,7 +16,7 @@ return new class extends Migration
                 id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                 model VARCHAR(100) NOT NULL,
                 brand VARCHAR(100) NOT NULL,
-                year VARCHAR(150) UNIQUE NOT NULL,
+                year VARCHAR(150)  NOT NULL,
                 reg_number VARCHAR(20) NOT NULL,
                 status bool,
                 daily_rate VARCHAR(100),

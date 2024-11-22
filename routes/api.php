@@ -30,9 +30,18 @@ return app(AuthController::class)->register($req, 'admin');
 
 
 Route::middleware('auth:admin')->group(function(){
-Route::get('/admin/pending-requests', [AdminController::class, 'viewPendingRequests']);
-Route::post('/admin/accept-request/{id}', [AdminController::class, 'acceptRentalRequest']);
-Route::post('/admin/decline-request/{id}', [AdminController::class, 'declineRentalRequest']);
+//Route::get('/admin/pending-requests', [AdminController::class, 'viewPendingRequests']);
+//Route::post('/admin/accept-request/{id}', [AdminController::class, 'acceptRentalRequest']);
+//Route::post('/admin/decline-request/{id}', [AdminController::class, 'declineRentalRequest']);
+
+// View all pending rental requests
+Route::get('/admin/rentals/pending', [AdminController::class, 'viewPendingRequests']);
+
+// Accept a rental request
+Route::put('/admin/rentals/accept/{id}', [AdminController::class, 'acceptRentalRequest']);
+
+// Decline a rental request
+Route::put('/admin/rentals/decline/{id}', [AdminController::class, 'declineRentalRequest']);
 
 Route::delete('/deleted/{id}', [VehicleController::class, 'deleteVehicle']);
 Route::put('/vehicles/{id}', [VehicleController::class, 'updateVehicle']);

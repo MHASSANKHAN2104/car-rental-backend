@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class AdminController extends Controller
 {
     // Method to view all pending requests
+    // Method to view pending requests
     public function viewPendingRequests()
     {
         $pendingRequests = DB::select('SELECT * FROM rental WHERE status = ?', ['PENDING']);
@@ -18,26 +20,75 @@ class AdminController extends Controller
     // Method to accept a rental request
     public function acceptRentalRequest($id)
     {
-        $affected = DB::update('UPDATE rental SET status = ? WHERE rental_id = ? AND status = ?', ['APPROVED', $id, 'PENDING']);
+        try {
+            // Update status in the rental table
+            $affected = DB::update('UPDATE rental SET status = ?, approved_at = NOW() WHERE rental_id = ? AND status = ?', ['APPROVED', $id, 'PENDING']);
 
-        if ($affected) {
-            return response()->json(['message' => 'Rental request accepted.']);
+            if (!$affected) {
+                return response()->json(['message' => 'Request not found or already processed.'], 404);
+            }
+
+            // Fetch customer and vehicle details
+            $rental = DB::selectOne('SELECT * FROM rental WHERE rental_id = ?', [$id]);
+            $customer = DB::selectOne('SELECT first_name, last_name, email, phone_number, address FROM customers WHERE id = ?', [$rental->cus_id]);
+            $vehicle = DB::selectOne('SELECT model, brand, reg_number FROM vehicles WHERE id = ?', [$rental->veh_id]);
+
+            // Prepare email data
+            $emailData = [
+                'companyName' => 'RENT-A-CAR',
+                'date' => now()->format('Y-m-d'),
+                'day' => now()->format('l'),
+                'customer' => $customer,
+                'rental' => $rental,
+                'vehicle' => $vehicle,
+            ];
+
+            // Send email to the customer
+            Mail::send('emails.rental_status', $emailData, function ($message) use ($customer) {
+                $message->to($customer->email)
+                    ->subject('Your Rental Request has been Approved');
+            });
+
+            return response()->json(['message' => 'Rental request accepted and email sent to the customer.'], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
         }
-
-        return response()->json(['message' => 'Request not found or already processed.'], 404);
     }
-
-    // Method to decline a rental request
     public function declineRentalRequest($id)
     {
-        $affected = DB::update('UPDATE rental SET status = ? WHERE rental_id = ? AND status = ?', ['REJECTED', $id, 'PENDING']);
+        try {
+            // Update status in the rental table
+            $affected = DB::update('UPDATE rental SET status = ?, approved_at = NOW() WHERE rental_id = ? AND status = ?', ['REJECTED', $id, 'PENDING']);
 
-        if ($affected) {
-            return response()->json(['message' => 'Rental request declined.']);
+            if (!$affected) {
+                return response()->json(['message' => 'Request not found or already processed.'], 404);
+            }
+
+            // Fetch customer details
+            $rental = DB::selectOne('SELECT * FROM rental WHERE rental_id = ?', [$id]);
+            $customer = DB::selectOne('SELECT first_name, last_name, email, phone_number, address FROM customers WHERE id = ?', [$rental->cus_id]);
+
+            // Prepare email data
+            $emailData = [
+                'companyName' => 'RENT-A-CAR', // Your company name
+                'date' => now()->format('Y-m-d'),
+                'day' => now()->format('l'),
+                'customer' => $customer,
+                'declineMessage' => 'We regret to inform you that your rental request has been declined. Please feel free to contact us for further details.',
+            ];
+
+            // Send email to the customer
+            Mail::send('emails.rental_declined', $emailData, function ($message) use ($customer) {
+                $message->to($customer->email)
+                    ->subject('Your Rental Request has been Declined');
+            });
+
+            return response()->json(['message' => 'Rental request declined and email sent to the customer.'], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
         }
-
-        return response()->json(['message' => 'Request not found or already processed.'], 404);
     }
+
 
     public function storeMaintenance(Request $request)
     {
@@ -250,6 +301,9 @@ public function deleteInsurance($id) {
     DB::delete("DELETE FROM insurance WHERE id = ?", [$id]);
     return response()->json(['message' => 'Insurance deleted successfully.']);
 }
+
+
+
 
 
 
