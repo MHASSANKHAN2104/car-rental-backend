@@ -10,6 +10,21 @@ class AdminController extends Controller
 {
     // Method to view all pending requests
     // Method to view pending requests
+
+    // Fetch customer details by ID
+public function getCustomerDetails($id)
+{
+    $customer = DB::table('customers')->where('id', $id)->first();
+    return response()->json($customer, 200);
+}
+
+// Fetch vehicle details by ID
+public function getVehicleDetails($id)
+{
+    $vehicle = DB::table('vehicles')->where('id', $id)->first();
+    return response()->json($vehicle, 200);
+}
+
     public function viewPendingRequests()
     {
         $pendingRequests = DB::select('SELECT * FROM rental WHERE status = ?', ['PENDING']);
