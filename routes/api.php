@@ -34,6 +34,13 @@ Route::middleware('auth:admin')->group(function(){
 //Route::post('/admin/accept-request/{id}', [AdminController::class, 'acceptRentalRequest']);
 //Route::post('/admin/decline-request/{id}', [AdminController::class, 'declineRentalRequest']);
 
+// Fetch customer details
+Route::get('/admin/customers/{id}', [AdminController::class, 'getCustomerDetails']);
+
+// Fetch vehicle details
+Route::get('/admin/vehicles/{id}', [AdminController::class, 'getVehicleDetails']);
+
+
 // View all pending rental requests
 Route::get('/admin/rentals/pending', [AdminController::class, 'viewPendingRequests']);
 
