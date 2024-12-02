@@ -36,7 +36,7 @@ Route::middleware('auth:admin')->group(function(){
 
 // Fetch customer details
 Route::get('/admin/customers/{id}', [AdminController::class, 'getCustomerDetails']);
-
+Route::get('/admin/customers', [AdminController::class, 'getAllCustomers']);
 // Fetch vehicle details
 Route::get('/admin/vehicles/{id}', [AdminController::class, 'getVehicleDetails']);
 
