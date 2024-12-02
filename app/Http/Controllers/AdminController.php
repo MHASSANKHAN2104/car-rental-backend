@@ -12,6 +12,19 @@ class AdminController extends Controller
     // Method to view pending requests
 
     // Fetch customer details by ID
+    public function getAllCustomers()
+    {
+        try {
+            // Raw SQL query to fetch all customers
+            $customers = DB::select('SELECT * FROM customers');
+
+            // Return the data as JSON
+            return response()->json($customers);
+        } catch (\Exception $e) {
+            // Error handling if the query fails
+            return response()->json(['error' => 'Failed to fetch customers', 'message' => $e->getMessage()], 500);
+        }
+    }
 public function getCustomerDetails($id)
 {
     $customer = DB::table('customers')->where('id', $id)->first();
@@ -47,7 +60,7 @@ public function getVehicleDetails($id)
             $rental = DB::selectOne('SELECT * FROM rental WHERE rental_id = ?', [$id]);
             $customer = DB::selectOne('SELECT first_name, last_name, email, phone_number, address FROM customers WHERE id = ?', [$rental->cus_id]);
             $vehicle = DB::selectOne('SELECT model, brand, reg_number FROM vehicles WHERE id = ?', [$rental->veh_id]);
-
+            DB::update('UPDATE vehicles SET status = 0 WHERE id = ?', [$rental->veh_id]);
             // Prepare email data
             $emailData = [
                 'companyName' => 'RENT-A-CAR',
