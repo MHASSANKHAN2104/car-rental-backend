@@ -36,7 +36,7 @@ Route::middleware('auth:admin')->group(function(){
 
 // Fetch customer details
 Route::get('/admin/customers/{id}', [AdminController::class, 'getCustomerDetails']);
-
+Route::get('/admin/customers', [AdminController::class, 'getAllCustomers']);
 // Fetch vehicle details
 Route::get('/admin/vehicles/{id}', [AdminController::class, 'getVehicleDetails']);
 
@@ -51,7 +51,7 @@ Route::put('/admin/rentals/accept/{id}', [AdminController::class, 'acceptRentalR
 Route::put('/admin/rentals/decline/{id}', [AdminController::class, 'declineRentalRequest']);
 
 Route::delete('/deleted/{id}', [VehicleController::class, 'deleteVehicle']);
-Route::put('/vehicles/{id}', [VehicleController::class, 'updateVehicle']);
+Route::post('/vehicles/{id}', [VehicleController::class, 'updateVehicle']);
 Route::get('/auth/admin/logouts', [AuthController::class,'AdminLogout']);
 Route::post('/add-vehicles', [VehicleController::class, 'add_vehicles']);
 
