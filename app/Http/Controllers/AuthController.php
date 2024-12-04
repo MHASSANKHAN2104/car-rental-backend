@@ -9,60 +9,81 @@ use App\Models\Admin;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\WelcomeEmail;
 
+
+
+ //////////////////////  isme customer ha ////////////////////////////////////
 class AuthController extends Controller
 {
     public function register(Request $req, $userType)
-{
-    try {
-        if ($userType === 'admin') {
-            // Registering an admin
-            $name = $req->input('name');
-            $email = $req->input('email');
-            $password = bcrypt($req->input('password'));
+    {
+        try {
+            if ($userType === 'admin') {
+                // Registering an admin
+                $name = $req->input('name');
+                $email = $req->input('email');
+                $password = bcrypt($req->input('password'));
 
-            DB::insert("INSERT INTO admins (name, email, password) VALUES (?, ?, ?)", [
-                $name, $email, $password
-            ]);
+                DB::insert("INSERT INTO admins (name, email, password) VALUES (?, ?, ?)", [
+                    $name, $email, $password
+                ]);
 
-            return response()->json(['message' => 'Admin registered successfully'], 201);
-        } else {
-            // Registering a customer
-            $firstName = $req->input('first_name');
-            $lastName = $req->input('last_name');
-            $email = $req->input('email');
-            $password = bcrypt($req->input('password'));
-            $phoneNumber = $req->input('phone_number');
-            $address = $req->input('address');
-            $city = $req->input('city');
-            $country = $req->input('country');
+                return response()->json(['message' => 'Admin registered successfully'], 201);
+            } else {
+                // Registering a customer
+                $firstName = $req->input('first_name');
+                $lastName = $req->input('last_name');
+                $email = $req->input('email');
+                $password = bcrypt($req->input('password'));
 
-            DB::insert("INSERT INTO customers (first_name, last_name, email, phone_number, address, city, country, password) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [
-                $firstName, $lastName, $email, $phoneNumber, $address, $city, $country, $password
-            ]);
+                // Insert into customers table
+                DB::insert("INSERT INTO customers (first_name, last_name, email, password) VALUES (?, ?, ?, ?)", [
+                    $firstName, $lastName, $email, $password
+                ]);
 
-            // Prepare the email data
-            $emailData = [
-                'companyName' => 'Your Rental Service',
-                'name' => "$firstName $lastName",
-                'greeting' => "Welcome, $firstName $lastName!",
-                'message' => "Thank you for signing up with us. We are thrilled to have you onboard.",
-            ];
+                // Get the last inserted customer ID
+                $customerId = DB::getPdo()->lastInsertId();
 
-            // Send the welcome email
-            Mail::send('emails.greetings', $emailData, function ($message) use ($email) {
-                $message->to($email)
-                        ->subject('Welcome to Our Rental Service');
-            });
+                // Insert into phone_numbers table
+                $phoneNumber = $req->input('phone_number');
+                if ($phoneNumber) {
+                    DB::insert("INSERT INTO phone_numbers (customer_id, phone_number) VALUES (?, ?)", [
+                        $customerId, $phoneNumber
+                    ]);
+                }
 
-            return response()->json(['message' => 'Customer registered successfully and email sent.'], 201);
+                // Insert into addresses table
+                $address = $req->input('address');
+                $city = $req->input('city');
+                $country = $req->input('country');
+                if ($address && $city && $country) {
+                    DB::insert("INSERT INTO addresses (customer_id, address, city, country) VALUES (?, ?, ?, ?)", [
+                        $customerId, $address, $city, $country
+                    ]);
+                }
+
+                // Prepare the email data
+                $emailData = [
+                    'companyName' => 'Your Rental Service',
+                    'name' => "$firstName $lastName",
+                    'greeting' => "Welcome, $firstName $lastName!",
+                    'message' => "Thank you for signing up with us. We are thrilled to have you onboard.",
+                ];
+
+                // Send the welcome email
+                Mail::send('emails.greetings', $emailData, function ($message) use ($email) {
+                    $message->to($email)
+                            ->subject('Welcome to Our Rental Service');
+                });
+
+                return response()->json(['message' => 'Customer registered successfully and email sent.'], 201);
+            }
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 404);
         }
-    } catch (\Exception $e) {
-        return response()->json(['error' => $e->getMessage()], 404);
     }
-}
 
 
-
+ //////////////////////  isme customer ha ////////////////////////////////////
     public function loginCustomer(Request $req, $userType = 'customer')
     {
         $credentials = request(['email', 'password']);
