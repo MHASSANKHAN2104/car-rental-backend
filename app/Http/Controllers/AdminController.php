@@ -16,7 +16,7 @@ class AdminController extends Controller
     {
         try {
             // Raw SQL query to fetch all customers
-            $customers = DB::select('SELECT * FROM customers');
+            $customers = DB::select('SELECT * FROM customers c join phone_numbers p on p.customer_id=c.id');
 
             // Return the data as JSON
             return response()->json($customers);
@@ -47,75 +47,129 @@ public function getVehicleDetails($id)
 
     // Method to accept a rental request
     public function acceptRentalRequest($id)
-    {
-        try {
-            // Update status in the rental table
-            $affected = DB::update('UPDATE rental SET status = ?, approved_at = NOW() WHERE rental_id = ? AND status = ?', ['APPROVED', $id, 'PENDING']);
+{
+    try {
+        // Fetch the rental details
+        $rental = DB::selectOne(
+            'SELECT * FROM rental WHERE rental_id = ? AND status = ?',
+            [$id, 'PENDING']
+        );
 
-            if (!$affected) {
-                return response()->json(['message' => 'Request not found or already processed.'], 404);
-            }
-
-            // Fetch customer and vehicle details
-            $rental = DB::selectOne('SELECT * FROM rental WHERE rental_id = ?', [$id]);
-            $customer = DB::selectOne('SELECT first_name, last_name, email, phone_number, address FROM customers WHERE id = ?', [$rental->cus_id]);
-            $vehicle = DB::selectOne('SELECT model, brand, reg_number FROM vehicles WHERE id = ?', [$rental->veh_id]);
-            DB::update('UPDATE vehicles SET status = 0 WHERE id = ?', [$rental->veh_id]);
-            // Prepare email data
-            $emailData = [
-                'companyName' => 'RENT-A-CAR',
-                'date' => now()->format('Y-m-d'),
-                'day' => now()->format('l'),
-                'customer' => $customer,
-                'rental' => $rental,
-                'vehicle' => $vehicle,
-            ];
-
-            // Send email to the customer
-            Mail::send('emails.rental_status', $emailData, function ($message) use ($customer) {
-                $message->to($customer->email)
-                    ->subject('Your Rental Request has been Approved');
-            });
-
-            return response()->json(['message' => 'Rental request accepted and email sent to the customer.'], 200);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+        if (!$rental) {
+            return response()->json(['message' => 'Request not found or already processed.'], 404);
         }
+
+        // Update the rental status to "APPROVED"
+        DB::update(
+            'UPDATE rental
+             SET status = ?, approved_at = NOW()
+             WHERE rental_id = ? AND status = ?',
+            ['APPROVED', $id, 'PENDING']
+        );
+
+        // Update the vehicle status to "unavailable" (status = 0 in statuses table)
+        DB::update(
+            'UPDATE vehicles v
+             SET v.status_id = 2  -- Set the status to "UNAVAILABLE"
+             WHERE v.id =?',
+            [$rental->veh_id]
+        );
+
+        // Fetch customer details
+        $customer = DB::selectOne(
+            'SELECT c.first_name, c.last_name, c.email, p.phone_number, a.address
+             FROM customers c
+             JOIN phone_numbers p ON p.customer_id = c.id
+             JOIN addresses a ON a.customer_id = c.id  -- Join addresses table to get the address
+             WHERE c.id = ?',
+            [$rental->cus_id]
+        );
+
+        // Fetch vehicle details
+        $vehicle = DB::selectOne(
+            'SELECT v.model, b.name AS brand, v.reg_number
+             FROM vehicles v
+             JOIN brands b ON v.brand_id = b.id  -- Join brands table to get the brand
+             WHERE v.id = ?',
+            [$rental->veh_id]
+        );
+
+        // Prepare email data
+        $emailData = [
+            'companyName' => 'RENT-A-CAR',
+            'date' => now()->format('Y-m-d'),
+            'day' => now()->format('l'),
+            'customer' => $customer,
+            'rental' => $rental,
+            'vehicle' => $vehicle,
+        ];
+
+        // Send email to the customer
+        Mail::send('emails.rental_status', $emailData, function ($message) use ($customer) {
+            $message->to($customer->email)
+                ->subject('Your Rental Request has been Approved');
+        });
+
+        return response()->json(['message' => 'Rental request accepted and email sent to the customer.'], 200);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
     }
-    public function declineRentalRequest($id)
-    {
-        try {
-            // Update status in the rental table
-            $affected = DB::update('UPDATE rental SET status = ?, approved_at = NOW() WHERE rental_id = ? AND status = ?', ['REJECTED', $id, 'PENDING']);
+}
 
-            if (!$affected) {
-                return response()->json(['message' => 'Request not found or already processed.'], 404);
-            }
+public function declineRentalRequest($id)
+{
+    try {
+        // Update status in the rental table
+        $affected = DB::update('UPDATE rental SET status = ?, approved_at = NOW() WHERE rental_id = ? AND status = ?', ['REJECTED', $id, 'PENDING']);
 
-            // Fetch customer details
-            $rental = DB::selectOne('SELECT * FROM rental WHERE rental_id = ?', [$id]);
-            $customer = DB::selectOne('SELECT first_name, last_name, email, phone_number, address FROM customers WHERE id = ?', [$rental->cus_id]);
-
-            // Prepare email data
-            $emailData = [
-                'companyName' => 'RENT-A-CAR', // Your company name
-                'date' => now()->format('Y-m-d'),
-                'day' => now()->format('l'),
-                'customer' => $customer,
-                'declineMessage' => 'We regret to inform you that your rental request has been declined. Please feel free to contact us for further details.',
-            ];
-
-            // Send email to the customer
-            Mail::send('emails.rental_declined', $emailData, function ($message) use ($customer) {
-                $message->to($customer->email)
-                    ->subject('Your Rental Request has been Declined');
-            });
-
-            return response()->json(['message' => 'Rental request declined and email sent to the customer.'], 200);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+        if (!$affected) {
+            return response()->json(['message' => 'Request not found or already processed.'], 404);
         }
+
+        // Fetch rental details
+        $rental = DB::selectOne('SELECT * FROM rental WHERE rental_id = ?', [$id]);
+
+        // Fetch customer details including address
+        $customer = DB::selectOne(
+            'SELECT c.first_name, c.last_name, c.email, p.phone_number, a.address
+             FROM customers c
+             JOIN phone_numbers p ON p.customer_id = c.id
+             JOIN addresses a ON a.customer_id = c.id  -- Join addresses table to get the address
+             WHERE c.id = ?',
+            [$rental->cus_id]
+        );
+
+        // Fetch vehicle details including brand
+        $vehicle = DB::selectOne(
+            'SELECT v.model, b.name AS brand, v.reg_number
+             FROM vehicles v
+             JOIN brands b ON v.brand_id = b.id  -- Join brands table to get the brand
+             WHERE v.id = ?',
+            [$rental->veh_id]
+        );
+
+        // Prepare email data
+        $emailData = [
+            'companyName' => 'RENT-A-CAR',  // Your company name
+            'date' => now()->format('Y-m-d'),
+            'day' => now()->format('l'),
+            'customer' => $customer,
+            'vehicle' => $vehicle,
+            'declineMessage' => 'We regret to inform you that your rental request has been declined. Please feel free to contact us for further details.',
+        ];
+
+        // Send email to the customer
+        Mail::send('emails.rental_declined', $emailData, function ($message) use ($customer) {
+            $message->to($customer->email)
+                ->subject('Your Rental Request has been Declined');
+        });
+
+        return response()->json(['message' => 'Rental request declined and email sent to the customer.'], 200);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
     }
+}
+
 
 
     public function storeMaintenance(Request $request)
@@ -221,9 +275,14 @@ public function getVehicleDetails($id)
     // List all incidents
     public function indexIncidents()
     {
-        $incidents = DB::select("SELECT incident_reporting.*, vehicles.model, vehicles.brand
-                                 FROM incident_reporting
-                                 JOIN vehicles ON incident_reporting.veh_id = vehicles.id");
+        $incidents = DB::select("
+    SELECT incident_reporting.*,
+           v.model,
+           b.name AS brand_name
+    FROM incident_reporting
+    JOIN vehicles v ON incident_reporting.veh_id = v.id
+    JOIN brands b ON v.brand_id = b.id
+");
 
         return response()->json($incidents);
     }
